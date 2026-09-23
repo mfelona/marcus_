@@ -1,0 +1,313 @@
+import java.util.Scanner;
+ 
+class Book {
+    private String bookId;
+    private String title;
+    private boolean available;
+ 
+    public Book(String bookId, String title) {
+        this.bookId = bookId;
+        this.title = title;
+        this.available = true;
+    }
+ 
+    public String getBookId() {
+        return bookId;
+    }
+ 
+    public String getTitle() {
+        return title;
+    }
+ 
+    public boolean isAvailable() {
+        return available;
+    }
+ 
+    public boolean borrow() {
+        if (!available) {
+            return false;
+        }
+ 
+        available = false;
+        return true;
+    }
+ 
+    public void returnToLibrary() {
+        available = true;
+    }
+}
+ 
+class Member {
+    private String memberId;
+    private String name;
+    private Book[] borrowedBooks;
+    private int borrowedCount;
+ 
+    public Member(String memberId, String name) {
+        this.memberId = memberId;
+        this.name = name;
+        this.borrowedBooks = new Book[3];
+        this.borrowedCount = 0;
+    }
+ 
+    public String getMemberId() {
+        return memberId;
+    }
+ 
+    public String getName() {
+        return name;
+    }
+ 
+    public boolean borrowBook(Book book) {
+        if (book == null || !book.isAvailable()
+                || borrowedCount >= borrowedBooks.length) {
+            return false;
+        }
+ 
+        if (book.borrow()) {
+            borrowedBooks[borrowedCount] = book;
+            borrowedCount++;
+            return true;
+        }
+ 
+        return false;
+    }
+ 
+    public boolean returnBook(String bookId) {
+        for (int i = 0; i < borrowedCount; i++) {
+            if (borrowedBooks[i].getBookId().equalsIgnoreCase(bookId)) {
+                borrowedBooks[i].returnToLibrary();
+ 
+                // Move the remaining books to remove the empty space.
+                for (int j = i; j < borrowedCount - 1; j++) {
+                    borrowedBooks[j] = borrowedBooks[j + 1];
+                }
+ 
+                borrowedBooks[borrowedCount - 1] = null;
+                borrowedCount--;
+                return true;
+            }
+        }
+ 
+        return false;
+    }
+ 
+    public void displayBorrowedBooks() {
+        System.out.println("Member: " + memberId + " - " + name);
+ 
+        if (borrowedCount == 0) {
+            System.out.println("  No borrowed books.");
+        } else {
+            for (int i = 0; i < borrowedCount; i++) {
+                System.out.println(
+                    "  " + borrowedBooks[i].getBookId()
+                    + " - " + borrowedBooks[i].getTitle()
+                );
+            }
+        }
+    }
+}
+ 
+public class LibraryBorrowingSystem {
+    private static final Scanner scanner = new Scanner(System.in);
+ 
+    public static void main(String[] args) {
+        System.out.println("=== LIBRARY BORROWING SYSTEM ===");
+ 
+        int bookCount = readPositiveInt("Number of books: ");
+        Book[] books = new Book[bookCount];
+ 
+        for (int i = 0; i < books.length; i++) {
+            System.out.println("\nBook " + (i + 1));
+ 
+            String bookId = readNonEmpty("Book ID: ");
+ 
+            while (findBook(books, bookId) != null) {
+                System.out.println("That book ID already exists.");
+                bookId = readNonEmpty("Enter another book ID: ");
+            }
+ 
+            String title = readNonEmpty("Title: ");
+            books[i] = new Book(bookId, title);
+        }
+ 
+        int memberCount = readPositiveInt("\nNumber of members: ");
+        Member[] members = new Member[memberCount];
+ 
+        for (int i = 0; i < members.length; i++) {
+            System.out.println("\nMember " + (i + 1));
+ 
+            String memberId = readNonEmpty("Member ID: ");
+ 
+            while (findMember(members, memberId) != null) {
+                System.out.println("That member ID already exists.");
+                memberId = readNonEmpty("Enter another member ID: ");
+            }
+ 
+            String name = readNonEmpty("Full name: ");
+            members[i] = new Member(memberId, name);
+        }
+ 
+        int actionCount = readNonNegativeInt("\nNumber of actions: ");
+ 
+        for (int i = 0; i < actionCount; i++) {
+            System.out.println("\nAction " + (i + 1));
+ 
+            String memberId = readNonEmpty("Member ID: ");
+            Member member = findMember(members, memberId);
+ 
+            String action = readAction();
+            String bookId = readNonEmpty("Book ID: ");
+            Book book = findBook(books, bookId);
+ 
+            if (member == null) {
+                System.out.println("Action rejected: member not found.");
+            } else if (book == null) {
+                System.out.println("Action rejected: book not found.");
+            } else if (action.equals("B")) {
+                if (member.borrowBook(book)) {
+                    System.out.println(
+                        "Borrow successful: " + book.getTitle()
+                    );
+                } else if (!book.isAvailable()) {
+                    System.out.println(
+                        "Borrow rejected: book is unavailable."
+                    );
+                } else {
+                    System.out.println(
+                        "Borrow rejected: member has reached "
+                        + "the 3-book limit."
+                    );
+                }
+            } else {
+                if (member.returnBook(bookId)) {
+                    System.out.println(
+                        "Return successful: " + book.getTitle()
+                    );
+                } else {
+                    System.out.println(
+                        "Return rejected: this member did not "
+                        + "borrow that book."
+                    );
+                }
+            }
+        }
+ 
+        System.out.println("\n=== BORROWED-BOOK SUMMARY ===");
+ 
+        for (Member member : members) {
+            member.displayBorrowedBooks();
+        }
+ 
+        System.out.println("\n=== AVAILABLE BOOKS ===");
+ 
+        boolean hasAvailableBook = false;
+ 
+        for (Book book : books) {
+            if (book.isAvailable()) {
+                System.out.println(
+                    book.getBookId() + " - " + book.getTitle()
+                );
+                hasAvailableBook = true;
+            }
+        }
+ 
+        if (!hasAvailableBook) {
+            System.out.println("No books are currently available.");
+        }
+    }
+ 
+    private static Book findBook(Book[] books, String bookId) {
+        for (Book book : books) {
+            if (book != null
+                    && book.getBookId().equalsIgnoreCase(bookId)) {
+                return book;
+            }
+        }
+ 
+        return null;
+    }
+ 
+    private static Member findMember(
+            Member[] members, String memberId) {
+ 
+        for (Member member : members) {
+            if (member != null
+                    && member.getMemberId().equalsIgnoreCase(memberId)) {
+                return member;
+            }
+        }
+ 
+        return null;
+    }
+ 
+    private static String readAction() {
+        while (true) {
+            String action = readNonEmpty(
+                "Action (B = borrow, R = return): "
+            ).toUpperCase();
+ 
+            if (action.equals("B") || action.equals("R")) {
+                return action;
+            }
+ 
+            System.out.println("Please enter B or R only.");
+        }
+    }
+ 
+    private static String readNonEmpty(String prompt) {
+        while (true) {
+            System.out.print(prompt);
+            String value = scanner.nextLine().trim();
+ 
+            if (!value.isEmpty()) {
+                return value;
+            }
+ 
+            System.out.println("Input cannot be empty.");
+        }
+    }
+ 
+    private static int readPositiveInt(String prompt) {
+        while (true) {
+            int value = readInteger(prompt);
+ 
+            if (value > 0) {
+                return value;
+            }
+ 
+            System.out.println(
+                "Please enter a number greater than 0."
+            );
+        }
+    }
+ 
+    private static int readNonNegativeInt(String prompt) {
+        while (true) {
+            int value = readInteger(prompt);
+ 
+            if (value >= 0) {
+                return value;
+            }
+ 
+            System.out.println(
+                "Please enter 0 or a positive number."
+            );
+        }
+    }
+ 
+    private static int readInteger(String prompt) {
+        while (true) {
+            System.out.print(prompt);
+            String input = scanner.nextLine().trim();
+ 
+            try {
+                return Integer.parseInt(input);
+            } catch (NumberFormatException error) {
+                System.out.println(
+                    "Please enter a valid whole number."
+                );
+            }
+        }
+    }
+}
